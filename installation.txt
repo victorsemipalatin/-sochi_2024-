@@ -1,0 +1,7 @@
+conda install -c conda-forge pytesseract
+
+sudo apt install tesseract-ocr
+
+sudo apt-get install tesseract-ocr-rus
+
+conda install PyMuPDF
