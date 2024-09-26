@@ -1,13 +1,15 @@
 import os
-import time
+import shutil
 import fitz
 from PIL import Image
 import pytesseract
+import pdfoutline
+from tqdm import tqdm
 
 
 def find_images(f):
     doc = fitz.open(f)
-    os.system(f"mkdir {dir_name}")
+    os.makedirs(trash)
 
     for page_index in range(len(doc)):
         page = doc[page_index]
@@ -19,37 +21,45 @@ def find_images(f):
 
             if pix.n - pix.alpha > 3:
                 pix = fitz.Pixmap(fitz.csRGB, pix)
-            pix.save(os.path.join(dir_name, "page_%s-image_%s.png" % (page_index, image_index)))
+            pix.save(os.path.join(trash, "page_%s-image_%s.png" % (page_index, image_index)))
             pix = None
 
 
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
+def add_toc(pdf, toc, new_pdf_name):
+    pdfoutline.pdfoutline(pdf, toc, new_pdf_name)
 
-file_name = "test_images.pdf"
-f = file_name
-file_path = ""
-dir_name = "pages"
 
-text = {}
-with fitz.open(f) as doc:
-    for num, page in enumerate(doc.pages()):
-        text[num] = page.get_text()
+pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract' # путь к утсановленному tesseract-ocr
 
-s = ""
-for page in text.keys():
-    s += text[page]
-    s += " "
-if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
-    start = time.time()
-    find_images(file_name)
-    text = " "
-    for file in sorted(os.listdir(dir_name)):
-        full_path = os.path.join(dir_name, file)
-        text += pytesseract.image_to_string(Image.open(full_path), lang='rus')
-        text += " "
-    print(text.split())
-    os.system(f"rm -r {dir_name}")
-    print(time.time() - start)
-else:
-    print(s.split())
+trash = "trash"
+pdf_dir = "train"
+text_dir = "texts"
+for folder in tqdm(os.listdir(pdf_dir)):
+    for f in os.listdir(os.path.join(pdf_dir, folder)):
+        text = {}
+        document = os.path.join(pdf_dir, folder, f)
+        with fitz.open(document) as doc:
+            for num, page in enumerate(doc.pages()):
+                text[num] = page.get_text()
 
+        s = ""
+        for page in text.keys():
+            s += text[page]
+            s += "\n"
+        if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
+            find_images(document)
+            s = ""
+            for image in sorted(os.listdir(trash)):
+                full_path = os.path.join(trash, image)
+                s += pytesseract.image_to_string(Image.open(full_path), lang='rus')
+                s += "\n"
+        with open(os.path.join(text_dir, f.replace(".pdf", ".txt")), "w") as l:
+            l.write(s)
+    try:
+        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), trash) # папка почему-то не удаляется в тесте с новатэком
+        shutil.rmtree(path)
+    except Exception as err:
+        print(err)
+
+
+add_toc("test.pdf", "sample.toc", "test_with_toc.pdf")

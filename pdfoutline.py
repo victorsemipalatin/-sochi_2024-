@@ -160,29 +160,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
     bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %d/%d %s' % (prefix, bar, iteration, total, suffix), end = printEnd)
+    # print('\r%s |%s| %d/%d %s' % (prefix, bar, iteration, total, suffix), end = printEnd)
     # Print New Line on Complete
-    if iteration == total:
-        print()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        prog="pdfoutline.py",
-        description='Adds table of contents to a PDF document.',
-        epilog="Example toc file at https://github.com/yutayamamoto/pdfoutline")
-
-    parser.add_argument('in_pdf', metavar = 'pdf_in', help = 'Input pdf file')
-    parser.add_argument('in_toc', metavar = 'toc_in', help = 'Table of contents file in the specified format')
-    parser.add_argument('out_pdf', metavar = 'pdf_out', help = 'Output pdf file')
-    parser.add_argument('-g', '--gs_path', type=str, help = "Path to ghostscript executable")
-
-    args = parser.parse_args()
-
-    if args.in_pdf == args.out_pdf:
-        print('Specify different names for input and output files.')
-        sys.exit()
-    if args.gs_path :
-        pdfoutline(args.in_pdf, args.in_toc, args.out_pdf, args.gs_path)
-    else:
-        pdfoutline(args.in_pdf, args.in_toc, args.out_pdf)
+    # if iteration == total:
+    #     print()

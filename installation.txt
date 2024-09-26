@@ -1,7 +1,13 @@
-conda install -c conda-forge pytesseract
-
 sudo apt install tesseract-ocr
 
 sudo apt-get install tesseract-ocr-rus
 
+conda install -c conda-forge pytesseract
+
 conda install PyMuPDF
+
+conda install flask
+
+conda install flask_sqlalchemy
+
+conda install tqdm
