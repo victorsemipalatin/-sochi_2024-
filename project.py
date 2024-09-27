@@ -5,6 +5,7 @@ from PIL import Image
 import pytesseract
 import pdfoutline
 from tqdm import tqdm
+import time
 
 
 def find_images(f):
@@ -35,31 +36,60 @@ trash = "trash"
 pdf_dir = "train"
 text_dir = "texts"
 for folder in tqdm(os.listdir(pdf_dir)):
-    for f in os.listdir(os.path.join(pdf_dir, folder)):
-        text = {}
-        document = os.path.join(pdf_dir, folder, f)
-        with fitz.open(document) as doc:
-            for num, page in enumerate(doc.pages()):
-                text[num] = page.get_text()
+    if folder != "toc.txt":
+        for f in os.listdir(os.path.join(pdf_dir, folder)):
+            text = {}
+            document = os.path.join(pdf_dir, folder, f)
+            with fitz.open(document) as doc:
+                for num, page in enumerate(doc.pages()):
+                    text[num] = page.get_text()
 
-        s = ""
-        for page in text.keys():
-            s += text[page]
-            s += "\n"
-        if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
-            find_images(document)
             s = ""
-            for image in sorted(os.listdir(trash)):
-                full_path = os.path.join(trash, image)
-                s += pytesseract.image_to_string(Image.open(full_path), lang='rus')
+            for page in text.keys():
+                s += text[page]
                 s += "\n"
-        with open(os.path.join(text_dir, f.replace(".pdf", ".txt")), "w") as l:
-            l.write(s)
-    try:
-        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), trash) # папка почему-то не удаляется в тесте с новатэком
-        shutil.rmtree(path)
-    except Exception as err:
-        print(err)
+            if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
+                find_images(document)
+                s = ""
+                for image in sorted(os.listdir(trash), key=lambda x: int(x[5:x.find("-")])):
+                    full_path = os.path.join(trash, image)
+                    s += pytesseract.image_to_string(Image.open(full_path), lang='rus')
+                    s += "\n"
+            with open(os.path.join(text_dir, f.replace(".pdf", ".txt")), "w") as l:
+                l.write(s)
+            try:
+                path = os.path.join(os.path.abspath(os.path.dirname(__file__)), trash) # папка почему-то не удаляется в тесте с новатэком
+                shutil.rmtree(path)
+            except Exception as err:
+                print(err)
 
 
-add_toc("test.pdf", "sample.toc", "test_with_toc.pdf")
+# add_toc("test.pdf", "sample.toc", "test_with_toc.pdf")
+
+# start = time.time()
+# text = {}
+# document = "test.pdf"
+# trash = "trash"
+# text_dir = "texts"
+# with fitz.open(document) as doc:
+#     for num, page in enumerate(doc.pages()):
+#         text[num] = page.get_text()
+
+# s = ""
+# for page in text.keys():
+#     s += text[page]
+#     s += "\n"
+# if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
+#     find_images(document)
+#     s = ""
+#     for image in sorted(os.listdir(trash), key=lambda x: int(x[5:x.find("-")])):
+#         full_path = os.path.join(trash, image)
+#         s += pytesseract.image_to_string(Image.open(full_path), lang='rus')
+#         s += "\n"
+# with open("my_file.txt", "w") as l:
+#     l.write(s)
+
+# print(time.time() - start)
+
+# path = os.path.join(os.path.abspath(os.path.dirname(__file__)), trash) # папка почему-то не удаляется в тесте с новатэком
+# shutil.rmtree(path)

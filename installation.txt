@@ -11,3 +11,11 @@ conda install flask
 conda install flask_sqlalchemy
 
 conda install tqdm
+
+conda install conda-forge::pypdf2
+
+conda install conda-forge::pdfminer
+
+conda install conda-forge::pdfplumber
+
+conda install conda-forge::pdf2image
