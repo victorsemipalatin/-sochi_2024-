@@ -14,7 +14,25 @@
 
     <script>
         document.getElementById('uploadForm').onsubmit = function(event) {
-            console.log("Форма отправляется...");
+            event.preventDefault(); // Отключаем стандартное поведение
+
+            // Создаем объект FormData
+            const formData = new FormData(document.getElementById('uploadForm'));
+
+            // Отправляем файл через AJAX запрос
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    alert(`Файл загружен. ID: ${data.id}`);
+                } else if (data.error) {
+                    alert(`Ошибка: ${data.error}`);
+                }
+            })
+            .catch(error => console.error('Ошибка:', error));
         };
     </script>
 </body>
