@@ -7,46 +7,52 @@
 </head>
 <body>
     <h1>Загрузите ваш PDF файл</h1>
-    <form id="uploadForm" action="http://localhost:5000/upload" method="post" enctype="multipart/form-data">
+    <form id="uploadForm" enctype="multipart/form-data">
         <input type="file" name="file" accept=".pdf" required>
         <button type="submit">Загрузить</button>
     </form>
 
+    <h2>Проверить и скачать обработанный файл</h2>
+    <form id="downloadForm">
+        <label for="fileId">ID файла:</label>
+        <input type="number" id="fileId" name="fileId" required>
+        <button type="submit">Проверить и скачать</button>
+    </form>
+
     <script>
-        document.getElementById('uploadForm').onsubmit = function(event) {
-            event.preventDefault();  // Предотвращаем стандартное поведение формы
+        document.getElementById('uploadForm').onsubmit = function (event) {
+            event.preventDefault();
 
             const formData = new FormData(document.getElementById('uploadForm'));
-            
+
             // Отправляем файл на сервер
             fetch('http://localhost:5000/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.id) {
-                    alert(`Файл загружен. ID: ${data.id}`);
-                    // Начать проверку статуса после успешной загрузки файла
-                    checkStatus(data.id);
-                } else if (data.error) {
-                    alert(`Ошибка: ${data.error}`);
-                }
-            })
-            .catch(error => console.error('Ошибка:', error));
+                .then(response => response.json())
+                .then(data => {
+                    if (data.id) {
+                        alert(`Файл загружен. ID: ${data.id}`);
+                        // Начать проверку статуса после успешной загрузки файла
+                        checkStatus(data.id);
+                    } else if (data.error) {
+                        alert(`Ошибка: ${data.error}`);
+                    }
+                })
+                .catch(error => console.error('Ошибка:', error));
         };
 
-        // Функция для проверки статуса
         function checkStatus(fileId) {
             fetch(`http://localhost:5000/status/${fileId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status) {
                         console.log(`Статус файла ${fileId}: ${data.status}`);
-                        if (data.status !== 'Обработка завершена') {
+                        if (data.status !== 'process_file - time 10 second') {
                             setTimeout(() => checkStatus(fileId), 5000);  // Проверяем каждые 5 секунд
                         } else {
-                            alert(`Файл ${fileId} успешно обработан.`);
+                            alert(`Файл ${fileId} успешно обработан. Можно скачать.`);
                         }
                     } else if (data.error) {
                         alert(`Ошибка: ${data.error}`);
@@ -54,6 +60,25 @@
                 })
                 .catch(error => console.error('Ошибка:', error));
         }
+
+        document.getElementById('downloadForm').onsubmit = function (event) {
+            event.preventDefault();
+
+            const fileId = document.getElementById('fileId').value;
+
+            // Проверяем статус файла перед скачиванием
+            fetch(`http://localhost:5000/status/${fileId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'Обработка завершена') {
+                        // Если файл готов, перенаправляем на скачивание
+                        window.location.href = `http://localhost:5000/download/${fileId}`;
+                    } else {
+                        alert(`Файл ${fileId} ещё не обработан. Статус: ${data.status}`);
+                    }
+                })
+                .catch(error => console.error('Ошибка:', error));
+        };
     </script>
 </body>
 </html>
