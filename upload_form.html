@@ -18,7 +18,7 @@
 
             const formData = new FormData(document.getElementById('uploadForm'));
 
-            fetch('/upload', {
+            fetch('http://localhost:8000/upload', {
                 method: 'POST',
                 body: formData
             })
