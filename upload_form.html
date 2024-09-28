@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Загрузите ваш PDF файл</h1>
-    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+    <form id="uploadForm" action="http://localhost:5000/upload" method="post" enctype="multipart/form-data">
         <input type="file" name="file" accept=".pdf" required>
         <button type="submit">Загрузить</button>
     </form>
@@ -17,8 +17,8 @@
             event.preventDefault();
 
             const formData = new FormData(document.getElementById('uploadForm'));
-
-            fetch('http://localhost:8000/upload', {
+            
+            fetch('/upload', {
                 method: 'POST',
                 body: formData
             })
