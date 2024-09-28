@@ -1,11 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 import os
 import threading
 import time
 import logging
 
 app = Flask(__name__)
+CORS(app)
 
 # Настройка базы данных
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///files.db'
