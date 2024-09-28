@@ -14,12 +14,10 @@
 
     <script>
         document.getElementById('uploadForm').onsubmit = function(event) {
-            event.preventDefault(); // Отключаем стандартное поведение
+            event.preventDefault();
 
-            // Создаем объект FormData
             const formData = new FormData(document.getElementById('uploadForm'));
 
-            // Отправляем файл через AJAX запрос
             fetch('/upload', {
                 method: 'POST',
                 body: formData
@@ -35,5 +33,26 @@
             .catch(error => console.error('Ошибка:', error));
         };
     </script>
+    
+    <script>
+    function checkStatus(fileId) {
+        fetch(`/status/${fileId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status) {
+                    console.log(`Статус файла ${fileId}: ${data.status}`);
+                    if (data.status !== 'Обработка завершена') {
+                        setTimeout(() => checkStatus(fileId), 5000);
+                    } else {
+                        alert(`Файл ${fileId} обработан.`);
+                    }
+                } else if (data.error) {
+                    alert(`Ошибка: ${data.error}`);
+                }
+            })
+            .catch(error => console.error('Ошибка:', error));
+    }
+</script>
+    
 </body>
 </html>
