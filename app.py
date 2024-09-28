@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
@@ -13,13 +13,17 @@ CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///files.db'
 db = SQLAlchemy(app)
 
-# Настройка папки для загрузки файлов
+# Настройка папки для загрузки и результатов обработки файлов
 UPLOAD_FOLDER = 'upload'
+PROCESSED_FOLDER = 'processed'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+if not os.path.exists(PROCESSED_FOLDER):
+    os.makedirs(PROCESSED_FOLDER)
 
 # Настройка логирования
 logging.basicConfig(filename='processing.log', level=logging.INFO)
+
 
 # Модель базы данных
 class File(db.Model):
@@ -28,27 +32,41 @@ class File(db.Model):
     name = db.Column(db.String(255), nullable=False)
     status = db.Column(db.String(255), default='Обработка не начата', nullable=False)
     status_final = db.Column(db.Boolean, default=False, nullable=False)
-    result_final = db.Column(db.Text, nullable=False)
+    result_final = db.Column(db.String(255), nullable=True)  # Добавлено для хранения имени обработанного файла
+
 
 with app.app_context():
     db.create_all()
 
+_processed_filename = ''
 # Функция обработки файла (эмуляция длительной обработки)
 def process_file(file_id):
-    # Устанавливаем контекст приложения
+    global _processed_filename
     with app.app_context():
         logging.info(f"process_file -  {file_id}")
         try:
             file = db.session.get(File, file_id)
             if file:
                 logging.info(f"process_file start - {file.name} с ID {file_id}")
-                # Эмуляция длительной обработки
-                time.sleep(10)
-                file.status = 'process_file - time 10 second'
+                time.sleep(10)  # Эмуляция длительной обработки
+                processed_filename = f"processed_{file.name}"
+                _processed_filename = processed_filename
+                processed_filepath = os.path.join(PROCESSED_FOLDER, processed_filename)
+
+                # Сохраняем результат обработки
+                with open(processed_filepath, 'w') as f:
+                    f.write(f"Это обработанный файл для {file.name}")
+
+                # Обновляем информацию о файле
+                file.status = 'Обработка завершена'
+                file.result_final = processed_filename
+                file.status_final = True
                 db.session.commit()
-                logging.info(f"FINISH FILE {file.name} с ID {file_id} завершена")
+
+                logging.info(f"Обработка файла {file.name} завершена. Результат сохранён в {processed_filename}.")
         except Exception as e:
             logging.error(f"ERROR FILE -  {file_id}: {str(e)}")
+
 
 # Первый эндпоинт для загрузки файла
 @app.route('/upload', methods=['POST'])
@@ -69,15 +87,15 @@ def upload_file():
     db.session.add(new_file)
     db.session.commit()
 
-    # Лог перед запуском потока
-    logging.info(f"Start potok - ID {new_file.id}")
+    logging.info(f"Запуск потока обработки - ID {new_file.id}")
 
     # Запуск обработки в отдельном потоке
     thread = threading.Thread(target=process_file, args=(new_file.id,))
     thread.start()
-    logging.info(f"File -  ID {new_file.id} start")
+    logging.info(f"Файл - ID {new_file.id} загружен и начата обработка")
 
     return jsonify({'id': new_file.id}), 200
+
 
 # Второй эндпоинт для проверки статуса обработки
 @app.route('/status/<int:file_id>', methods=['GET'])
@@ -85,7 +103,22 @@ def check_status(file_id):
     file = File.query.get(file_id)
     if not file:
         return jsonify({'error': 'Файл не найден'}), 404
-    return jsonify({'id': file.id, 'status': file.status}), 200
+    return jsonify({
+        'id': file.id,
+        'status': file.status,
+        'status_final': file.status_final,
+        'result_final': file.result_final
+    }), 200
+
+
+# Эндпоинт для скачивания обработанного файла
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    try:
+        return send_from_directory(PROCESSED_FOLDER, _processed_filename, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': 'Файл не найден'}), 404
+
 
 if __name__ == '__main__':
     app.run(debug=True)
