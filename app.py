@@ -5,6 +5,7 @@ import os
 import threading
 import time
 import logging
+import shutil
 
 app = Flask(__name__)
 CORS(app)
@@ -49,13 +50,15 @@ def process_file(file_id):
             if file:
                 logging.info(f"process_file start - {file.name} с ID {file_id}")
                 time.sleep(10)  # Эмуляция длительной обработки
+
+                # Путь к исходному и обработанному файлу
+                original_filepath = os.path.join(UPLOAD_FOLDER, file.name)
                 processed_filename = f"processed_{file.name}"
                 _processed_filename = processed_filename
                 processed_filepath = os.path.join(PROCESSED_FOLDER, processed_filename)
 
-                # Сохраняем результат обработки
-                with open(processed_filepath, 'w') as f:
-                    f.write(f"Это обработанный файл для {file.name}")
+                # Копируем оригинальный PDF файл в папку processed
+                shutil.copyfile(original_filepath, processed_filepath)
 
                 # Обновляем информацию о файле
                 file.status = 'Обработка завершена'
