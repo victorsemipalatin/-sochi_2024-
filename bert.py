@@ -32,10 +32,10 @@ if __name__ == "__main__":
     start_time = time.time()
     threshold = 0.99 # <---- EXPERIMENT WITH THIS PARAMETER
     batch_size = 64 # <---- CHANGE TO len(page)
-    tokenizer = BertTokenizer.from_pretrained("DeepPavlov/rubert-base-cased-sentence", num_labels=2,
+    tokenizer = BertTokenizer.from_pretrained("JamradisePalms/bert_sentence_classifier_tuned", num_labels=2,
                                               output_attentions=False, output_hidden_states=False)
-    model = BertForSequenceClassification.from_pretrained("DeepPavlov/rubert-base-cased-sentence")
-    model.load_state_dict(torch.load(path_to_pt, weights_only=True))
+    model = BertForSequenceClassification.from_pretrained("JamradisePalms/bert_sentence_classifier_tuned")
+    # model.load_state_dict(torch.load(path_to_pt, weights_only=True))
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model.to(device)
     # TODO: ADD SPELL-CHECKER
