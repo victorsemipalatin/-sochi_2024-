@@ -1,95 +1,90 @@
 import os
-import shutil
 import fitz
-from PIL import Image
-import pytesseract
+import shutil
 import pdfoutline
-from tqdm import tqdm
+import pytesseract
+from PIL import Image
+import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor
+from bert import *
 import time
-
-
-def find_images(f):
-    doc = fitz.open(f)
-    os.makedirs(trash)
-
-    for page_index in range(len(doc)):
-        page = doc[page_index]
-        image_list = page.get_images()
-
-        for image_index, img in enumerate(image_list, start=1):
-            xref = img[0]
-            pix = fitz.Pixmap(doc, xref)
-
-            if pix.n - pix.alpha > 3:
-                pix = fitz.Pixmap(fitz.csRGB, pix)
-            pix.save(os.path.join(trash, "page_%s-image_%s.png" % (page_index, image_index)))
-            pix = None
-
-
-def add_toc(pdf, toc, new_pdf_name):
-    pdfoutline.pdfoutline(pdf, toc, new_pdf_name)
 
 
 pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract' # путь к утсановленному tesseract-ocr
 
-trash = "trash"
-pdf_dir = "train"
-text_dir = "texts"
-for folder in tqdm(os.listdir(pdf_dir)):
-    if folder != "toc.txt":
-        for f in os.listdir(os.path.join(pdf_dir, folder)):
-            text = {}
-            document = os.path.join(pdf_dir, folder, f)
-            with fitz.open(document) as doc:
-                for num, page in enumerate(doc.pages()):
-                    text[num] = page.get_text()
 
-            s = ""
-            for page in text.keys():
-                s += text[page]
-                s += "\n"
-            if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
-                find_images(document)
-                s = ""
-                for image in sorted(os.listdir(trash), key=lambda x: int(x[5:x.find("-")])):
-                    full_path = os.path.join(trash, image)
-                    s += pytesseract.image_to_string(Image.open(full_path), lang='rus')
-                    s += "\n"
-            with open(os.path.join(text_dir, f.replace(".pdf", ".txt")), "w") as l:
-                l.write(s)
-            try:
-                path = os.path.join(os.path.abspath(os.path.dirname(__file__)), trash) # папка почему-то не удаляется в тесте с новатэком
-                shutil.rmtree(path)
-            except Exception as err:
-                print(err)
+def image_to_text(img):
+    return pytesseract.image_to_string(Image.open(img), lang='rus')
 
 
-# add_toc("test.pdf", "sample.toc", "test_with_toc.pdf")
+def get_text_from_not_ocr_pdf(document): # самое длинное названии функции в истории
+    trash = "trash"
+    try:
+        shutil.rmtree(trash)
+        os.mkdir(trash)
+    except FileNotFoundError:
+        os.mkdir(trash)
+    doc = fitz.open(document)
+    for i in range(len(doc)):
+        page = doc.load_page(i)  # number of page
+        pix = page.get_pixmap()
+        output = f"{i+1}.png"
+        pix.save(os.path.join(trash, output))
+    doc.close()
+    pics = sorted(os.listdir(trash), key=lambda x: int(x[:x.find(".")]))
+    pics = [os.path.join(trash, pic) for pic in pics]
+    with ProcessPoolExecutor(max_workers=os.cpu_count() // 2 - 1) as executor:
+        tasks = {executor.submit(image_to_text, img_path): img_path for img_path in pics}
+        for future in concurrent.futures.as_completed(tasks):
+            page_number = tasks[future]
+            data = future.result(), page_number[-5]
+            yield data
 
-# start = time.time()
-# text = {}
-# document = "test.pdf"
-# trash = "trash"
-# text_dir = "texts"
-# with fitz.open(document) as doc:
-#     for num, page in enumerate(doc.pages()):
-#         text[num] = page.get_text()
 
-# s = ""
-# for page in text.keys():
-#     s += text[page]
-#     s += "\n"
-# if set(s) == set(['\n', ' ']) or set(s) == set('\n') or set(s) == set(' ') or set(s) == set():
-#     find_images(document)
-#     s = ""
-#     for image in sorted(os.listdir(trash), key=lambda x: int(x[5:x.find("-")])):
-#         full_path = os.path.join(trash, image)
-#         s += pytesseract.image_to_string(Image.open(full_path), lang='rus')
-#         s += "\n"
-# with open("my_file.txt", "w") as l:
-#     l.write(s)
+def add_toc(document, toc, new_document_name):
+    pdfoutline.pdfoutline(document, toc, new_document_name)
 
-# print(time.time() - start)
 
-# path = os.path.join(os.path.abspath(os.path.dirname(__file__)), trash) # папка почему-то не удаляется в тесте с новатэком
-# shutil.rmtree(path)
+def make_hyperlinks_page(f):
+    # https://docs-python.ru/packages/modul-fpdf2-python/vneshnie-vnutrennie-ssylki/
+    pass
+
+
+def make_table_of_contents(document):
+    with fitz.open(document) as doc:
+        if len(doc.get_toc()) != 0:
+            print("TOC already exists")
+            f = ""
+            make_hyperlinks_page(f)
+            exit(0)
+    all_text = {}
+    with fitz.open(document) as doc:
+        for num, page in enumerate(doc.pages()):
+            all_text[num] = page.get_text()
+
+    err = 5
+    lines_count = sum([len(all_text[page].split()) for page in all_text.keys()])
+    if lines_count + err * 30 < len(all_text.keys()) * 30: # проверка количества заранее неоцифрованных строк (ешё надо подумать)
+        text_per_page = sorted([el[0] for el in get_text_from_not_ocr_pdf(document)], key=lambda el: el[1])
+    else:
+        text_per_page = [all_text[page] for page in all_text.keys()]
+
+    toc = []
+    for i, text in enumerate(text_per_page):
+        tmp = get_key_words(text)
+        tmp = [(el, i) for el in tmp]
+        toc += tmp
+    
+    with open("toc.toc", 'w') as f:
+        for i in range(len(toc)):
+            f.write(f"{toc[i][0]} {toc[i][1] + 1}\n")
+
+    add_toc(document, "toc.toc", "p.pdf")
+
+
+print("поехали")
+start = time.time()
+document = 'test_1.pdf'
+make_table_of_contents(document)
+print(time.time() - start)
+
