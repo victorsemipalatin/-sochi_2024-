@@ -50,7 +50,6 @@ def process_file(file_id):
             file = db.session.get(File, file_id)
             if file:
                 logging.info(f"process_file start - {file.name} с ID {file_id}")
-                time.sleep(10)  # Эмуляция длительной обработки
 
                 # Путь к исходному и обработанному файлу
                 original_filepath = os.path.join(UPLOAD_FOLDER, file.name)

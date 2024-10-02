@@ -3,11 +3,12 @@ import fitz
 import shutil
 import pdfoutline
 import pytesseract
+import PyPDF2
+from fpdf import FPDF
 from PIL import Image
 import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor
 from bert import *
-import time
 
 
 pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract' # путь к утсановленному tesseract-ocr
@@ -25,9 +26,15 @@ def get_text_from_not_ocr_pdf(document): # самое длинное назва�
     except FileNotFoundError:
         os.mkdir(trash)
     doc = fitz.open(document)
+    pdf_reader = PyPDF2.PdfReader(document)
     for i in range(len(doc)):
         page = doc.load_page(i)  # number of page
-        pix = page.get_pixmap()
+        box = pdf_reader.pages[i]
+        width = int(float(box.mediabox.width) * 0.3527)
+        height = int(float(box.mediabox.height) * 0.3527)
+        if width > height:
+            page.set_rotation(90)
+        pix = page.get_pixmap(dpi=200)
         output = f"{i+1}.png"
         pix.save(os.path.join(trash, output))
     doc.close()
@@ -45,9 +52,31 @@ def add_toc(document, toc, new_document_name):
     pdfoutline.pdfoutline(document, toc, new_document_name)
 
 
-def make_hyperlinks_page(f):
-    # https://docs-python.ru/packages/modul-fpdf2-python/vneshnie-vnutrennie-ssylki/
-    pass
+def make_hyperlinks_page(f, toc):
+    pdf = FPDF()
+    trash = "trash"
+    pics = sorted(os.listdir(trash), key=lambda x: int(x[:x.find(".")]))
+    pics = [os.path.join(trash, pic) for pic in pics]
+    pdf_reader = PyPDF2.PdfReader(f)
+    for i, pic in enumerate(pics):
+        pdf.add_page()
+        box = pdf_reader.pages[i]
+        width = int(float(box.mediabox.width) * 0.3527)
+        height = int(float(box.mediabox.height) * 0.3527)
+        if width > height:
+            width, height = height, width
+        pdf.image(Image.open(pic), x=0, y=0, w=width, h=height)
+    pdf.add_page()
+    font_dir = '/usr/share/fonts/truetype/freefont'
+    pdf.add_font("Serif", style="B", fname=f"{font_dir}/FreeSerif.ttf")
+    pdf.set_font("Serif", "B", size=20)
+    pdf.cell(w=pdf.epw, text="Содержание", align="C")
+    pdf.set_font("Serif", "B", size=15)
+    pdf.cell(0, 10, "", new_x="LMARGIN", new_y="NEXT")
+    for el in toc:
+        pdf.cell(0, 10, f"{el[0]} {el[1]}", new_x="LMARGIN", new_y="NEXT", link=pdf.add_link(page=el[1]))
+    output = "output.pdf"
+    pdf.output(output)
 
 
 def make_table_of_contents(document):
@@ -72,19 +101,17 @@ def make_table_of_contents(document):
     toc = []
     for i, text in enumerate(text_per_page):
         tmp = get_key_words(text)
-        tmp = [(el, i) for el in tmp]
+        tmp = [(el, i + 1) for el in tmp]
         toc += tmp
+    
+    make_hyperlinks_page(document, toc)
+    tmp = "output.pdf"
     
     with open("toc.toc", 'w') as f:
         for i in range(len(toc)):
             f.write(f"{toc[i][0]} {toc[i][1] + 1}\n")
 
-    add_toc(document, "toc.toc", "p.pdf")
+    add_toc(tmp, "toc.toc", "new.pdf")
 
-
-print("поехали")
-start = time.time()
-document = 'test_1.pdf'
-make_table_of_contents(document)
-print(time.time() - start)
+    os.remove(tmp)
 

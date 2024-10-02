@@ -1,4 +1,4 @@
-from transformers import BertTokenizer, BertForSequenceClassification, AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, T5TokenizerFast
+from transformers import BertTokenizer, BertForSequenceClassification, AutoTokenizer, AutoModel
 import torch
 
 
@@ -39,24 +39,3 @@ model = BertForSequenceClassification.from_pretrained("JamradisePalms/bert_sente
 # model.load_state_dict(torch.load(path_to_pt, weights_only=True))
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model.to(device)
-
-MODEL_NAME = 'UrukHan/t5-russian-spell'
-MAX_INPUT = 32 # передавать в tokenizer()
-task_prefix = "Spell correct: " # использовать в tokenizer()
-
-correcter_tokenizer = T5TokenizerFast.from_pretrained(MODEL_NAME) # Токенайзер
-correcter = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to(device) # Модель для корректного написания
-
-#HOW TO USE:
-# encoded = tokenizer(
-#     [task_prefix + sequence for sequence in candidates],
-#     padding="longest",
-#     max_length=MAX_INPUT,
-#     truncation=True,
-#     return_tensors="pt",
-# ).to(device)
-#
-# predicts = model.generate(**encoded)
-# candidates = tokenizer.batch_decode(predicts, skip_special_tokens=True)
-#
-# candidates = [cand for cand in candidates if any(char.isalpha() for char in cand)]
