@@ -6,6 +6,7 @@ import threading
 import time
 import logging
 import shutil
+import project
 
 app = Flask(__name__)
 CORS(app)
@@ -56,9 +57,10 @@ def process_file(file_id):
                 processed_filename = f"processed_{file.name}"
                 _processed_filename = processed_filename
                 processed_filepath = os.path.join(PROCESSED_FOLDER, processed_filename)
-
+                project.make_table_of_contents(original_filepath)
+                tmp = 'new.pdf'
                 # Копируем оригинальный PDF файл в папку processed
-                shutil.copyfile(original_filepath, processed_filepath)
+                shutil.copyfile(tmp, processed_filepath)
 
                 # Обновляем информацию о файле
                 file.status = 'Обработка завершена'
