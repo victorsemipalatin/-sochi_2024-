@@ -31,7 +31,7 @@ class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.DateTime, default=db.func.current_timestamp(), nullable=False)
     name = db.Column(db.String(255), nullable=False)
-    status = db.Column(db.String(255), default='Обработка не начата', nullable=False)
+    status = db.Column(db.String(255), default='Идет обработка', nullable=False)
     status_final = db.Column(db.Boolean, default=False, nullable=False)
     result_final = db.Column(db.String(255), nullable=True)  # Добавлено для хранения имени обработанного файла
 
