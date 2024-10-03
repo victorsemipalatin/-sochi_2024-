@@ -94,7 +94,9 @@ def make_table_of_contents(document):
     err = 5
     lines_count = sum([len(all_text[page].split()) for page in all_text.keys()])
     if lines_count + err * 30 < len(all_text.keys()) * 30: # проверка количества заранее неоцифрованных строк (ешё надо подумать)
-        text_per_page = sorted([el[0] for el in get_text_from_not_ocr_pdf(document)], key=lambda el: el[1])
+        text_per_page = get_text_from_not_ocr_pdf(document)
+        text_per_page = sorted(text_per_page, key=lambda el: el[1])
+        text_per_page = [el[0] for el in text_per_page]
     else:
         text_per_page = [all_text[page] for page in all_text.keys()]
 
@@ -109,7 +111,7 @@ def make_table_of_contents(document):
     
     with open("toc.toc", 'w') as f:
         for i in range(len(toc)):
-            f.write(f"{toc[i][0]} {toc[i][1] + 1}\n")
+            f.write(f"{toc[i][0]} {toc[i][1]}\n")
 
     add_toc(tmp, "toc.toc", "new.pdf")
 

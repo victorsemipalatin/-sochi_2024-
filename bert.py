@@ -14,7 +14,7 @@ def search_candidates(model: AutoModel, tokenizer: AutoTokenizer, batch_size, th
 
         for j in range(len(batch)):
             phrase = tokenizer.decode(inputs['input_ids'][j].tolist(), skip_special_tokens=True)
-            if predictions[j][1] > threshold and len(phrase) > 2: # len(phrase) > 3 - КОСТЫЛЬ
+            if predictions[j][1] > threshold and sum(char.isalpha() for char in phrase) > 4:
                 candidates.append(phrase)
 
     for i in range(len(candidates)-1, 0, -1):
