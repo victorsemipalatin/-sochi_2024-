@@ -4,7 +4,7 @@ import torch
 
 def search_candidates(model: AutoModel, tokenizer: AutoTokenizer, batch_size, threshold: float, device: str, text: str) -> list[str]:
     candidates = []
-    lines = text.split()
+    lines = text.split("\n")
     rows = [row.strip().replace('_', ' ') for row in lines if len(row.strip()) > 0]
     for i in range(0, len(rows), len(lines)):
         batch = rows[i:i + batch_size]
